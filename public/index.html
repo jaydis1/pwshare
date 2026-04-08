@@ -30,43 +30,6 @@
       padding: 40px;
     }
 
-    .nav {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 30px;
-      border-bottom: 2px solid #e0e0e0;
-      padding-bottom: 15px;
-    }
-
-    .nav button {
-      background: none;
-      border: none;
-      padding: 10px 15px;
-      color: #666;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      border-bottom: 3px solid transparent;
-      transition: all 0.2s;
-    }
-
-    .nav button.active {
-      color: #2f3860;
-      border-bottom-color: #2f3860;
-    }
-
-    .nav button:hover:not(.active) {
-      color: #2f3860;
-    }
-
-    .view {
-      display: none;
-    }
-
-    .view.active {
-      display: block;
-    }
-
     h1 {
       color: #333;
       margin-bottom: 10px;
@@ -381,17 +344,9 @@
 </head>
 <body>
   <div class="container">
-    <div class="nav">
-      <button class="nav-btn active" data-view="share">
-        <span class="icon">[+]</span> Share
-      </button>
-      <button class="nav-btn" data-view="admin">
-        <span class="icon">[*]</span> Admin
-      </button>
-    </div>
 
     <!-- Share View -->
-    <div id="shareView" class="view active">
+    <div id="shareView" class="view active" style="display: block;">
       <h1><span class="icon">[#]</span> Password Share</h1>
       <p class="subtitle">Securely share passwords and sensitive data</p>
 
@@ -442,13 +397,6 @@
       </div>
     </div>
 
-    <!-- Admin View -->
-    <div id="adminView" class="view">
-      <h1><span class="icon">[*]</span> Admin Panel</h1>
-      <p class="subtitle">Manage all active shares</p>
-
-      <div id="pastesList"></div>
-    </div>
   </div>
 
   <script>
@@ -529,22 +477,6 @@
     const submitBtn = shareForm.querySelector('button[type="submit"]');
     const submitText = document.getElementById('submitText');
     const loader = document.getElementById('loader');
-
-    // Navigation
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-
-        e.target.closest('.nav-btn').classList.add('active');
-        const viewId = e.target.closest('.nav-btn').dataset.view + 'View';
-        document.getElementById(viewId).classList.add('active');
-
-        if (e.target.closest('.nav-btn').dataset.view === 'admin') {
-          loadPastes();
-        }
-      });
-    });
 
     // Show/hide custom hours
     expirationPreset.addEventListener('change', (e) => {
@@ -674,82 +606,6 @@
         alert('[+] Copied to clipboard!');
       } catch (err) {
         alert('Failed to copy');
-      }
-    };
-
-    // Admin: Load pastes
-    async function loadPastes() {
-      try {
-        const response = await fetch('/api/admin/pastes');
-        const pastes = await response.json();
-
-        const pastesList = document.getElementById('pastesList');
-
-        if (pastes.length === 0) {
-          pastesList.innerHTML = '<div class="empty-state">No active shares</div>';
-          return;
-        }
-
-        let html = `
-          <table class="pastes-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        pastes.forEach(paste => {
-          const now = new Date();
-          const expiresAt = new Date(paste.expiresAt);
-          let statusClass = 'status-active';
-          let statusText = 'Active';
-
-          if (paste.expired) {
-            statusClass = 'status-expired';
-            statusText = 'Expired';
-          } else if (paste.accessed) {
-            statusClass = 'status-accessed';
-            statusText = 'Accessed';
-          }
-
-          const created = new Date(paste.createdAt).toLocaleString();
-          const expires = expiresAt.toLocaleString();
-          const shortId = paste.id.substring(0, 8);
-
-          html += `
-            <tr>
-              <td><code>${shortId}...</code></td>
-              <td>${created}</td>
-              <td>${expires}</td>
-              <td><span class="${statusClass}">${statusText}</span></td>
-              <td><button class="btn-delete" onclick="deletePaste('${paste.id}')">Delete</button></td>
-            </tr>
-          `;
-        });
-
-        html += '</tbody></table>';
-        pastesList.innerHTML = html;
-
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    window.deletePaste = async (id) => {
-      if (!confirm('Delete this share?')) return;
-
-      try {
-        const response = await fetch(`/api/admin/pastes/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to delete');
-        loadPastes();
-      } catch (err) {
-        alert('Error deleting paste: ' + err.message);
       }
     };
 
