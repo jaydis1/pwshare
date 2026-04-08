@@ -475,6 +475,9 @@
       loader.style.display = 'inline-block';
 
       try {
+        // Wait for sodium to be ready
+        await sodium.ready;
+
         // Generate encryption key
         const key = await CryptoUtil.generateKey();
 
@@ -532,6 +535,9 @@
       if (!shareId || !keyString) return;
 
       try {
+        // Wait for sodium to be ready
+        await sodium.ready;
+
         // Import the key
         const key = await CryptoUtil.importKey(keyString);
 
