@@ -537,7 +537,7 @@
         if (!response.ok) throw new Error('Failed to create share link');
 
         const result = await response.json();
-        const shareUrl = `${window.location.origin}?share=${result.id}&key=${keyString}`;
+        const shareUrl = `${window.location.origin}?share=${result.id}&key=${encodeURIComponent(keyString)}`;
 
         shareLink.textContent = shareUrl;
         resultSection.classList.add('show');
@@ -562,9 +562,11 @@
     async function handleShareLink() {
       const params = new URLSearchParams(window.location.search);
       const shareId = params.get('share');
-      const keyString = params.get('key');
+      let keyString = params.get('key');
 
       if (!shareId || !keyString) return;
+
+      keyString = decodeURIComponent(keyString);
 
       try {
         const key = await CryptoUtil.importKey(keyString);
