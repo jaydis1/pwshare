@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Password Share - Secure Sharing</title>
-  <script src="https://cdn.jsdelivr.net/gh/jedisct1/libsodium.js@0.7.11/dist/browsers/libsodium.js"></script>
   <style>
     * {
       margin: 0;
@@ -31,12 +30,41 @@
       padding: 40px;
     }
 
-    .icon {
-      font-weight: bold;
-      display: inline-block;
-      width: 20px;
-      text-align: center;
-      font-family: monospace;
+    .nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 15px;
+    }
+
+    .nav button {
+      background: none;
+      border: none;
+      padding: 10px 15px;
+      color: #666;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav button.active {
+      color: #2f3860;
+      border-bottom-color: #2f3860;
+    }
+
+    .nav button:hover:not(.active) {
+      color: #2f3860;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
     }
 
     h1 {
@@ -49,6 +77,11 @@
       color: #666;
       margin-bottom: 30px;
       font-size: 14px;
+    }
+
+    .icon {
+      font-weight: bold;
+      font-family: monospace;
     }
 
     .form-group {
@@ -81,14 +114,8 @@
       box-shadow: 0 0 0 3px rgba(47, 56, 96, 0.1);
     }
 
-    .select-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
     select {
-      flex: 1;
+      width: 100%;
       padding: 10px;
       border: 1.5px solid #e0e0e0;
       border-radius: 6px;
@@ -104,13 +131,8 @@
       box-shadow: 0 0 0 3px rgba(47, 56, 96, 0.1);
     }
 
-    .input-group {
-      display: flex;
-      gap: 10px;
-    }
-
     input[type="number"] {
-      flex: 1;
+      width: 100%;
       padding: 10px;
       border: 1.5px solid #e0e0e0;
       border-radius: 6px;
@@ -151,8 +173,9 @@
       box-shadow: 0 10px 20px rgba(47, 56, 96, 0.3);
     }
 
-    .btn-primary:active {
-      transform: translateY(0);
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn-secondary {
@@ -275,17 +298,6 @@
       color: white;
     }
 
-    .security-note {
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 12px;
-      border-radius: 4px;
-      color: #856404;
-      font-size: 12px;
-      line-height: 1.6;
-      margin-bottom: 20px;
-    }
-
     .loader {
       display: inline-block;
       width: 16px;
@@ -294,37 +306,107 @@
       border-top-color: white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+      margin-left: 8px;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .pastes-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    .pastes-table thead {
+      background: #f0f0f0;
+    }
+
+    .pastes-table th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      color: #333;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .pastes-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 13px;
+    }
+
+    .pastes-table tr:hover {
+      background: #f9f9f9;
+    }
+
+    .status-expired {
+      color: #999;
+      font-weight: 500;
+    }
+
+    .status-accessed {
+      color: #4caf50;
+      font-weight: 500;
+    }
+
+    .status-active {
+      color: #2f3860;
+      font-weight: 500;
+    }
+
+    .btn-delete {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .btn-delete:hover {
+      background: #c92a2a;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1><span class="icon">[*]</span> Password Share</h1>
-    <p class="subtitle">Securely share passwords and sensitive data</p>
-
-    <div class="security-note">
-      <span class="icon">[✓]</span> All data is encrypted in your browser before being sent to the server<br>
-      <span class="icon">[✓]</span> Share links can only be accessed once<br>
-      <span class="icon">[✓]</span> Data automatically expires based on your selection
+    <div class="nav">
+      <button class="nav-btn active" data-view="share">
+        <span class="icon">[+]</span> Share
+      </button>
+      <button class="nav-btn" data-view="admin">
+        <span class="icon">[*]</span> Admin
+      </button>
     </div>
 
-    <form id="shareForm">
-      <div class="form-group">
-        <label for="data">Paste your password or data:</label>
-        <textarea
-          id="data"
-          placeholder="Enter the password, API key, or sensitive data you want to share..."
-          required
-        ></textarea>
-      </div>
+    <!-- Share View -->
+    <div id="shareView" class="view active">
+      <h1><span class="icon">[#]</span> Password Share</h1>
+      <p class="subtitle">Securely share passwords and sensitive data</p>
 
-      <div class="form-group">
-        <label for="expiration">Expiration time:</label>
-        <div class="select-group">
+      <form id="shareForm">
+        <div class="form-group">
+          <label for="data">Paste your password or data:</label>
+          <textarea
+            id="data"
+            placeholder="Enter the password, API key, or sensitive data you want to share..."
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="expirationPreset">Expiration time:</label>
           <select id="expirationPreset">
             <option value="1h">1 hour</option>
             <option value="1d" selected>1 day</option>
@@ -332,87 +414,109 @@
             <option value="custom">Custom hours</option>
           </select>
         </div>
-      </div>
 
-      <div class="form-group" id="customHoursGroup" style="display: none;">
-        <label for="customHours">Custom expiration (hours):</label>
-        <div class="input-group">
+        <div class="form-group" id="customHoursGroup" style="display: none;">
+          <label for="customHours">Custom expiration (hours):</label>
           <input type="number" id="customHours" min="0.5" max="720" step="0.5" value="24" placeholder="Enter hours">
         </div>
-      </div>
 
-      <div class="button-group">
-        <button type="submit" class="btn-primary">
-          <span id="submitText">Generate Share Link</span>
-          <span id="loader" class="loader" style="display: none; margin-left: 8px;"></span>
-        </button>
-        <button type="reset" class="btn-secondary">Clear</button>
-      </div>
+        <div class="button-group">
+          <button type="submit" class="btn-primary">
+            <span id="submitText">Generate Share Link</span>
+            <span id="loader" class="loader" style="display: none;"></span>
+          </button>
+          <button type="reset" class="btn-secondary">Clear</button>
+        </div>
 
-      <div class="error" id="error"></div>
-      <div class="success-message" id="successMessage"></div>
-    </form>
+        <div class="error" id="error"></div>
+        <div class="success-message" id="successMessage"></div>
+      </form>
 
-    <div class="result-section" id="resultSection">
-      <div class="result-label">Share Link (one-time access):</div>
-      <div class="share-link" id="shareLink"></div>
-      <button class="copy-button" id="copyButton">Copy Link</button>
-      <div class="info-box">
-        <span class="icon">[i]</span> Share this link with someone. They can paste it in the browser to decrypt and view your data. The link will only work once and then expire.
+      <div class="result-section" id="resultSection">
+        <div class="result-label">Share Link (one-time access):</div>
+        <div class="share-link" id="shareLink"></div>
+        <button class="copy-button" id="copyButton">Copy Link</button>
+        <div class="info-box">
+          [i] Share this link with someone. They can paste it in the browser to decrypt and view your data. The link will only work once and then expire.
+        </div>
       </div>
+    </div>
+
+    <!-- Admin View -->
+    <div id="adminView" class="view">
+      <h1><span class="icon">[*]</span> Admin Panel</h1>
+      <p class="subtitle">Manage all active shares</p>
+
+      <div id="pastesList"></div>
     </div>
   </div>
 
   <script>
-    // Crypto utilities using libsodium
+    // Crypto utilities using Web Crypto API
     class CryptoUtil {
-      // Generate a random key
       static async generateKey() {
-        await sodium.ready;
-        return sodium.randombytes_buf(32);
+        return await crypto.subtle.generateKey(
+          { name: 'AES-GCM', length: 256 },
+          true,
+          ['encrypt', 'decrypt']
+        );
       }
 
-      // Encrypt data
       static async encrypt(data, key) {
-        await sodium.ready;
         const encoder = new TextEncoder();
         const dataBuffer = encoder.encode(data);
-        const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
 
-        const encrypted = sodium.crypto_secretbox_easy(dataBuffer, nonce, key);
+        const encrypted = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv },
+          key,
+          dataBuffer
+        );
 
         return {
-          ciphertext: sodium.to_base64(encrypted),
-          nonce: sodium.to_base64(nonce)
+          ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+          iv: btoa(String.fromCharCode(...iv))
         };
       }
 
-      // Export key to base64 for transmission
       static async exportKey(key) {
-        await sodium.ready;
-        return sodium.to_base64(key);
+        const exported = await crypto.subtle.exportKey('raw', key);
+        return btoa(String.fromCharCode(...new Uint8Array(exported)));
       }
 
-      // Import key from base64
       static async importKey(keyString) {
-        await sodium.ready;
-        return sodium.from_base64(keyString);
+        const binaryString = atob(keyString);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        return await crypto.subtle.importKey(
+          'raw',
+          bytes,
+          { name: 'AES-GCM', length: 256 },
+          true,
+          ['encrypt', 'decrypt']
+        );
       }
 
-      // Decrypt data
       static async decrypt(encrypted, key) {
-        await sodium.ready;
-        const ciphertext = sodium.from_base64(encrypted.ciphertext);
-        const nonce = sodium.from_base64(encrypted.nonce);
+        const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), c => c.charCodeAt(0));
+        const iv = Uint8Array.from(atob(encrypted.iv), c => c.charCodeAt(0));
 
-        const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
+        const decrypted = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv },
+          key,
+          ciphertext
+        );
 
         const decoder = new TextDecoder();
         return decoder.decode(decrypted);
       }
     }
 
-    const form = document.getElementById('shareForm');
+    // DOM elements
+    const shareForm = document.getElementById('shareForm');
     const dataInput = document.getElementById('data');
     const expirationPreset = document.getElementById('expirationPreset');
     const customHoursGroup = document.getElementById('customHoursGroup');
@@ -422,16 +526,31 @@
     const copyButton = document.getElementById('copyButton');
     const errorDiv = document.getElementById('error');
     const successMessage = document.getElementById('successMessage');
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = shareForm.querySelector('button[type="submit"]');
     const submitText = document.getElementById('submitText');
     const loader = document.getElementById('loader');
 
-    // Show/hide custom hours input
+    // Navigation
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+        e.target.closest('.nav-btn').classList.add('active');
+        const viewId = e.target.closest('.nav-btn').dataset.view + 'View';
+        document.getElementById(viewId).classList.add('active');
+
+        if (e.target.closest('.nav-btn').dataset.view === 'admin') {
+          loadPastes();
+        }
+      });
+    });
+
+    // Show/hide custom hours
     expirationPreset.addEventListener('change', (e) => {
       customHoursGroup.style.display = e.target.value === 'custom' ? 'block' : 'none';
     });
 
-    // Get expiration in seconds
     function getExpirationSeconds() {
       const preset = expirationPreset.value;
       if (preset === 'custom') {
@@ -441,11 +560,10 @@
       return expirations[preset] || 86400;
     }
 
-    // Copy to clipboard
     copyButton.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(shareLink.textContent);
-        copyButton.textContent = '✓ Copied!';
+        copyButton.textContent = '[✓] Copied!';
         copyButton.classList.add('copied');
         setTimeout(() => {
           copyButton.textContent = 'Copy Link';
@@ -456,8 +574,7 @@
       }
     });
 
-    // Form submission
-    form.addEventListener('submit', async (e) => {
+    shareForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorDiv.classList.remove('show');
       successMessage.classList.remove('show');
@@ -469,50 +586,33 @@
         return;
       }
 
-      // Show loading state
       submitBtn.disabled = true;
       submitText.style.display = 'none';
       loader.style.display = 'inline-block';
 
       try {
-        // Wait for sodium to be ready
-        await sodium.ready;
-
-        // Generate encryption key
         const key = await CryptoUtil.generateKey();
-
-        // Encrypt the data
         const encrypted = await CryptoUtil.encrypt(data, key);
-
-        // Export key to base64
         const keyString = await CryptoUtil.exportKey(key);
-
-        // Get expiration time
         const expiresIn = getExpirationSeconds();
 
-        // Send encrypted data to server
         const response = await fetch('/api/share', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encrypted, expiresIn })
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to create share link');
-        }
+        if (!response.ok) throw new Error('Failed to create share link');
 
         const result = await response.json();
         const shareUrl = `${window.location.origin}?share=${result.id}&key=${keyString}`;
 
-        // Display share link
         shareLink.textContent = shareUrl;
         resultSection.classList.add('show');
-
-        // Clear form
-        form.reset();
+        shareForm.reset();
         customHoursGroup.style.display = 'none';
 
-        successMessage.textContent = '✓ Share link created! The recipient can access it once.';
+        successMessage.textContent = '[+] Share link created! The recipient can access it once.';
         successMessage.classList.add('show');
 
       } catch (err) {
@@ -526,7 +626,7 @@
       }
     });
 
-    // Handle share link retrieval
+    // Handle received share
     async function handleShareLink() {
       const params = new URLSearchParams(window.location.search);
       const shareId = params.get('share');
@@ -535,33 +635,22 @@
       if (!shareId || !keyString) return;
 
       try {
-        // Wait for sodium to be ready
-        await sodium.ready;
-
-        // Import the key
         const key = await CryptoUtil.importKey(keyString);
-
-        // Fetch encrypted data from server
         const response = await fetch(`/api/share/${shareId}`);
 
-        if (!response.ok) {
-          throw new Error('Share not found or expired');
-        }
+        if (!response.ok) throw new Error('Share not found or expired');
 
         const result = await response.json();
-
-        // Decrypt the data
         const decrypted = await CryptoUtil.decrypt(result.encrypted, key);
 
-        // Display with option to copy
         const html = `
-          <h2 style="color: #333; margin-bottom: 15px;"><span style="font-weight: bold; font-family: monospace;">[i]</span> Shared Data</h2>
+          <h2 style="color: #333; margin-bottom: 15px;"><span class="icon">[i]</span> Shared Data</h2>
           <div style="background: white; padding: 16px; border-radius: 6px; border: 1px solid #e0e0e0; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; word-break: break-all; margin-bottom: 15px; max-height: 300px; overflow-y: auto;">
             ${escapeHtml(decrypted)}
           </div>
           <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #2f3860 0%, #ac021f 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Copy to Clipboard</button>
           <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; border-radius: 4px; color: #2e7d32; font-size: 13px; margin-top: 15px;">
-            <span style="font-weight: bold; font-family: monospace;">[✓]</span> Data decrypted in your browser. This share link will no longer work after this access.
+            [✓] Data decrypted in your browser. This share link will no longer work after this access.
           </div>
         `;
 
@@ -575,30 +664,96 @@
     }
 
     function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
       return text.replace(/[&<>"']/g, m => map[m]);
     }
 
     window.copyToClipboard = async () => {
       try {
         await navigator.clipboard.writeText(window.decryptedData);
-        alert('✓ Copied to clipboard!');
+        alert('[+] Copied to clipboard!');
       } catch (err) {
         alert('Failed to copy');
       }
     };
 
-    // Check for share link on page load
-    (async () => {
-      await sodium.ready;
-      handleShareLink();
-    })();
+    // Admin: Load pastes
+    async function loadPastes() {
+      try {
+        const response = await fetch('/api/admin/pastes');
+        const pastes = await response.json();
+
+        const pastesList = document.getElementById('pastesList');
+
+        if (pastes.length === 0) {
+          pastesList.innerHTML = '<div class="empty-state">No active shares</div>';
+          return;
+        }
+
+        let html = `
+          <table class="pastes-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Created</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        pastes.forEach(paste => {
+          const now = new Date();
+          const expiresAt = new Date(paste.expiresAt);
+          let statusClass = 'status-active';
+          let statusText = 'Active';
+
+          if (paste.expired) {
+            statusClass = 'status-expired';
+            statusText = 'Expired';
+          } else if (paste.accessed) {
+            statusClass = 'status-accessed';
+            statusText = 'Accessed';
+          }
+
+          const created = new Date(paste.createdAt).toLocaleString();
+          const expires = expiresAt.toLocaleString();
+          const shortId = paste.id.substring(0, 8);
+
+          html += `
+            <tr>
+              <td><code>${shortId}...</code></td>
+              <td>${created}</td>
+              <td>${expires}</td>
+              <td><span class="${statusClass}">${statusText}</span></td>
+              <td><button class="btn-delete" onclick="deletePaste('${paste.id}')">Delete</button></td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table>';
+        pastesList.innerHTML = html;
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    window.deletePaste = async (id) => {
+      if (!confirm('Delete this share?')) return;
+
+      try {
+        const response = await fetch(`/api/admin/pastes/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete');
+        loadPastes();
+      } catch (err) {
+        alert('Error deleting paste: ' + err.message);
+      }
+    };
+
+    handleShareLink();
   </script>
 </body>
 </html>
