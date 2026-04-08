@@ -95,9 +95,9 @@ app.get('/api/share/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Share expired' });
   }
 
-  // Return encrypted data and mark as accessed
+  // Return encrypted data and delete immediately
   res.json({ encrypted: data.encrypted });
-  data.accessed = true;
+  store.delete(id);
 });
 
 // Admin: List all pastes
