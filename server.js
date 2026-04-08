@@ -5,13 +5,25 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 // Store encrypted data and expiration times
 const store = new Map();
 
 app.use(express.static(__dirname));
 app.use(express.json());
+
+// Admin authentication middleware
+function adminAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+
+  if (token !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
 
 // Store encrypted password
 app.post('/api/share', (req, res) => {
@@ -26,7 +38,8 @@ app.post('/api/share', (req, res) => {
 
   store.set(id, {
     encrypted,
-    expiresAt: expirationTime
+    expiresAt: expirationTime,
+    expiresIn
   });
 
   res.json({ id, expiresIn });
@@ -61,6 +74,31 @@ setInterval(() => {
   }
 }, 60000); // Check every minute
 
+// Admin endpoints
+app.get('/api/admin/pastes', adminAuth, (req, res) => {
+  const pastes = Array.from(store.entries()).map(([id, data]) => ({
+    id,
+    createdAt: new Date(data.expiresAt - (data.expiresIn || 0) * 1000).toISOString(),
+    expiresAt: new Date(data.expiresAt).toISOString(),
+    expiresIn: Math.ceil((data.expiresAt - Date.now()) / 1000),
+    size: data.encrypted.ciphertext.length
+  }));
+
+  res.json({ total: pastes.length, pastes });
+});
+
+app.delete('/api/admin/pastes/:id', adminAuth, (req, res) => {
+  const { id } = req.params;
+
+  if (store.has(id)) {
+    store.delete(id);
+    return res.json({ message: 'Paste deleted' });
+  }
+
+  res.status(404).json({ error: 'Paste not found' });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Admin panel available at http://localhost:${PORT}/admin.html`);
 });

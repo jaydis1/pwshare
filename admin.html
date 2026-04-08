@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Share - Admin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #2f3860 0%, #ac021f 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 900px;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .login-form {
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="password"]:focus {
+      outline: none;
+      border-color: #2f3860;
+      box-shadow: 0 0 0 3px rgba(47, 56, 96, 0.1);
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2f3860 0%, #ac021f 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(47, 56, 96, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: #ff6b6b;
+      color: white;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .btn-danger:hover {
+      background: #ff5252;
+    }
+
+    .btn-logout {
+      background: #f0f0f0;
+      color: #333;
+      padding: 8px 16px;
+      font-size: 13px;
+      float: right;
+    }
+
+    .btn-logout:hover {
+      background: #e0e0e0;
+    }
+
+    .error {
+      background: #ffe8e8;
+      border-left: 4px solid #ff6b6b;
+      padding: 12px;
+      border-radius: 4px;
+      color: #c92a2a;
+      font-size: 13px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .pastes-section {
+      margin-top: 30px;
+    }
+
+    .pastes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .stats {
+      color: #666;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: #f8f9fa;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    th {
+      padding: 12px;
+      text-align: left;
+      color: #333;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 13px;
+      color: #555;
+    }
+
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    .paste-id {
+      font-family: 'Monaco', 'Courier New', monospace;
+      color: #2f3860;
+      word-break: break-all;
+    }
+
+    .expires-soon {
+      color: #c92a2a;
+      font-weight: 500;
+    }
+
+    .expires-later {
+      color: #4caf50;
+    }
+
+    .no-pastes {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+      font-size: 14px;
+    }
+
+    .refresh-btn {
+      background: #2f3860;
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
+      margin-left: 10px;
+    }
+
+    .refresh-btn:hover {
+      background: #1a1f3a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Admin Panel</h1>
+    <p class="subtitle">Manage shared passwords and pastes</p>
+
+    <div class="login-form" id="loginForm">
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="password">Admin Password:</label>
+          <input type="password" id="password" placeholder="Enter admin password" required>
+        </div>
+        <button type="submit" class="btn-primary">Login</button>
+        <div class="error" id="loginError"></div>
+      </form>
+    </div>
+
+    <div class="pastes-section hidden" id="pastesSection">
+      <div class="pastes-header">
+        <div>
+          <h2 style="color: #333; margin-bottom: 5px;">Active Pastes</h2>
+          <p class="stats">Total: <span id="totalPastes">0</span> pastes</p>
+        </div>
+        <div>
+          <button class="refresh-btn" onclick="loadPastes()">🔄 Refresh</button>
+          <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <table id="pastesTable">
+        <thead>
+          <tr>
+            <th>Paste ID</th>
+            <th>Created</th>
+            <th>Expires In</th>
+            <th>Size (bytes)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="pastesTableBody">
+        </tbody>
+      </table>
+
+      <div class="no-pastes" id="noPastes" style="display: none;">
+        No active pastes
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Store token in sessionStorage
+    function setToken(token) {
+      sessionStorage.setItem('adminToken', token);
+    }
+
+    function getToken() {
+      return sessionStorage.getItem('adminToken');
+    }
+
+    function clearToken() {
+      sessionStorage.removeItem('adminToken');
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const password = document.getElementById('password').value;
+      setToken(password);
+      loadPastes();
+    }
+
+    function logout() {
+      clearToken();
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('pastesSection').classList.add('hidden');
+      document.getElementById('password').value = '';
+    }
+
+    async function loadPastes() {
+      const token = getToken();
+      if (!token) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/pastes', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          alert('Invalid password');
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to load pastes');
+        }
+
+        const data = await response.json();
+        displayPastes(data.pastes);
+
+        // Hide login form and show pastes section
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('pastesSection').classList.remove('hidden');
+
+      } catch (err) {
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.textContent = `Error: ${err.message}`;
+        errorDiv.classList.add('show');
+      }
+    }
+
+    function displayPastes(pastes) {
+      const tbody = document.getElementById('pastesTableBody');
+      const noPastes = document.getElementById('noPastes');
+      const totalPastes = document.getElementById('totalPastes');
+
+      totalPastes.textContent = pastes.length;
+
+      if (pastes.length === 0) {
+        tbody.innerHTML = '';
+        noPastes.style.display = 'block';
+        document.getElementById('pastesTable').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('pastesTable').style.display = 'table';
+      noPastes.style.display = 'none';
+
+      tbody.innerHTML = pastes.map(paste => {
+        const expiresAt = new Date(paste.expiresAt);
+        const now = new Date();
+        const minutesLeft = Math.ceil((expiresAt - now) / (1000 * 60));
+        const isSoon = minutesLeft < 60;
+
+        return `
+          <tr>
+            <td class="paste-id">${paste.id}</td>
+            <td>${new Date(paste.createdAt).toLocaleString()}</td>
+            <td class="${isSoon ? 'expires-soon' : 'expires-later'}">
+              ${formatTimeRemaining(paste.expiresIn)}
+            </td>
+            <td>${paste.size}</td>
+            <td>
+              <button class="btn-danger" onclick="deletePaste('${paste.id}')">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function formatTimeRemaining(seconds) {
+      if (seconds < 60) {
+        return `${seconds}s`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) {
+        return `${minutes}m`;
+      }
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) {
+        return `${hours}h`;
+      }
+      const days = Math.floor(hours / 24);
+      return `${days}d`;
+    }
+
+    async function deletePaste(id) {
+      if (!confirm('Are you sure you want to delete this paste?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/pastes/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete paste');
+        }
+
+        loadPastes();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    // Check if already logged in
+    if (getToken()) {
+      loadPastes();
+    }
+  </script>
+</body>
+</html>
