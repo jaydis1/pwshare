@@ -589,7 +589,10 @@
     };
 
     // Check for share link on page load
-    handleShareLink();
+    (async () => {
+      await sodium.ready;
+      handleShareLink();
+    })();
   </script>
 </body>
 </html>
