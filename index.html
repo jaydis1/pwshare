@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Password Share - Secure Sharing</title>
+  <script src="https://cdn.jsdelivr.net/gh/jedisct1/libsodium.js@0.7.11/dist/browsers/libsodium.js"></script>
   <style>
     * {
       margin: 0;
@@ -28,6 +29,14 @@
       width: 100%;
       max-width: 600px;
       padding: 40px;
+    }
+
+    .icon {
+      font-weight: bold;
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+      font-family: monospace;
     }
 
     h1 {
@@ -294,13 +303,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔐 Password Share</h1>
+    <h1><span class="icon">[*]</span> Password Share</h1>
     <p class="subtitle">Securely share passwords and sensitive data</p>
 
     <div class="security-note">
-      ✓ All data is encrypted in your browser before being sent to the server<br>
-      ✓ Share links can only be accessed once<br>
-      ✓ Data automatically expires based on your selection
+      <span class="icon">[✓]</span> All data is encrypted in your browser before being sent to the server<br>
+      <span class="icon">[✓]</span> Share links can only be accessed once<br>
+      <span class="icon">[✓]</span> Data automatically expires based on your selection
     </div>
 
     <form id="shareForm">
@@ -349,74 +358,54 @@
       <div class="share-link" id="shareLink"></div>
       <button class="copy-button" id="copyButton">Copy Link</button>
       <div class="info-box">
-        📋 Share this link with someone. They can paste it in the browser to decrypt and view your data. The link will only work once and then expire.
+        <span class="icon">[i]</span> Share this link with someone. They can paste it in the browser to decrypt and view your data. The link will only work once and then expire.
       </div>
     </div>
   </div>
 
   <script>
-    // Crypto utilities using Web Crypto API
+    // Crypto utilities using libsodium
     class CryptoUtil {
       // Generate a random key
       static async generateKey() {
-        return await crypto.subtle.generateKey(
-          { name: 'AES-GCM', length: 256 },
-          true,
-          ['encrypt', 'decrypt']
-        );
+        await sodium.ready;
+        return sodium.randombytes_buf(32);
       }
 
       // Encrypt data
       static async encrypt(data, key) {
+        await sodium.ready;
         const encoder = new TextEncoder();
         const dataBuffer = encoder.encode(data);
-        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
 
-        const encrypted = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv },
-          key,
-          dataBuffer
-        );
+        const encrypted = sodium.crypto_secretbox_easy(dataBuffer, nonce, key);
 
         return {
-          ciphertext: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
-          iv: btoa(String.fromCharCode(...iv))
+          ciphertext: sodium.to_base64(encrypted),
+          nonce: sodium.to_base64(nonce)
         };
       }
 
       // Export key to base64 for transmission
       static async exportKey(key) {
-        const exported = await crypto.subtle.exportKey('raw', key);
-        return btoa(String.fromCharCode(...new Uint8Array(exported)));
+        await sodium.ready;
+        return sodium.to_base64(key);
       }
 
       // Import key from base64
       static async importKey(keyString) {
-        const binaryString = atob(keyString);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        return await crypto.subtle.importKey(
-          'raw',
-          bytes,
-          { name: 'AES-GCM', length: 256 },
-          true,
-          ['encrypt', 'decrypt']
-        );
+        await sodium.ready;
+        return sodium.from_base64(keyString);
       }
 
       // Decrypt data
       static async decrypt(encrypted, key) {
-        const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), c => c.charCodeAt(0));
-        const iv = Uint8Array.from(atob(encrypted.iv), c => c.charCodeAt(0));
+        await sodium.ready;
+        const ciphertext = sodium.from_base64(encrypted.ciphertext);
+        const nonce = sodium.from_base64(encrypted.nonce);
 
-        const decrypted = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv },
-          key,
-          ciphertext
-        );
+        const decrypted = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
 
         const decoder = new TextDecoder();
         return decoder.decode(decrypted);
@@ -560,13 +549,13 @@
 
         // Display with option to copy
         const html = `
-          <h2 style="color: #333; margin-bottom: 15px;">📋 Shared Data</h2>
+          <h2 style="color: #333; margin-bottom: 15px;"><span style="font-weight: bold; font-family: monospace;">[i]</span> Shared Data</h2>
           <div style="background: white; padding: 16px; border-radius: 6px; border: 1px solid #e0e0e0; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; word-break: break-all; margin-bottom: 15px; max-height: 300px; overflow-y: auto;">
             ${escapeHtml(decrypted)}
           </div>
           <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #2f3860 0%, #ac021f 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Copy to Clipboard</button>
           <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; border-radius: 4px; color: #2e7d32; font-size: 13px; margin-top: 15px;">
-            ✓ Data decrypted in your browser. This share link will no longer work after this access.
+            <span style="font-weight: bold; font-family: monospace;">[✓]</span> Data decrypted in your browser. This share link will no longer work after this access.
           </div>
         `;
 

@@ -1,36 +1,44 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { v4 as uuid } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Sodium } from 'sodium-plus';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-// Store encrypted data and expiration times
-const store = new Map();
+interface ShareData {
+  encrypted: string;
+  expiresAt: number;
+  expiresIn: number;
+}
 
-app.use(express.static(__dirname));
+const store = new Map<string, ShareData>();
+
+app.use(express.static(path.join(__dirname, '..')));
 app.use(express.json());
 
 // Admin authentication middleware
-function adminAuth(req, res, next) {
+function adminAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];
 
   if (token !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
   }
   next();
 }
 
 // Store encrypted password
-app.post('/api/share', (req, res) => {
+app.post('/api/share', (req: Request, res: Response): void => {
   const { encrypted, expiresIn } = req.body;
 
   if (!encrypted) {
-    return res.status(400).json({ error: 'No data provided' });
+    res.status(400).json({ error: 'No data provided' });
+    return;
   }
 
   const id = uuid();
@@ -46,17 +54,19 @@ app.post('/api/share', (req, res) => {
 });
 
 // Retrieve encrypted password
-app.get('/api/share/:id', (req, res) => {
+app.get('/api/share/:id', (req: Request, res: Response): void => {
   const { id } = req.params;
   const data = store.get(id);
 
   if (!data) {
-    return res.status(404).json({ error: 'Share not found or expired' });
+    res.status(404).json({ error: 'Share not found or expired' });
+    return;
   }
 
   if (Date.now() > data.expiresAt) {
     store.delete(id);
-    return res.status(404).json({ error: 'Share expired' });
+    res.status(404).json({ error: 'Share expired' });
+    return;
   }
 
   // Return encrypted data and delete after retrieval
@@ -75,24 +85,25 @@ setInterval(() => {
 }, 60000); // Check every minute
 
 // Admin endpoints
-app.get('/api/admin/pastes', adminAuth, (req, res) => {
+app.get('/api/admin/pastes', adminAuth, (req: Request, res: Response): void => {
   const pastes = Array.from(store.entries()).map(([id, data]) => ({
     id,
-    createdAt: new Date(data.expiresAt - (data.expiresIn || 0) * 1000).toISOString(),
+    createdAt: new Date(data.expiresAt - data.expiresIn * 1000).toISOString(),
     expiresAt: new Date(data.expiresAt).toISOString(),
     expiresIn: Math.ceil((data.expiresAt - Date.now()) / 1000),
-    size: data.encrypted.ciphertext.length
+    size: data.encrypted.length
   }));
 
   res.json({ total: pastes.length, pastes });
 });
 
-app.delete('/api/admin/pastes/:id', adminAuth, (req, res) => {
+app.delete('/api/admin/pastes/:id', adminAuth, (req: Request, res: Response): void => {
   const { id } = req.params;
 
   if (store.has(id)) {
     store.delete(id);
-    return res.json({ message: 'Paste deleted' });
+    res.json({ message: 'Paste deleted' });
+    return;
   }
 
   res.status(404).json({ error: 'Paste not found' });

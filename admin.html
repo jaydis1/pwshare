@@ -42,6 +42,14 @@
       font-size: 14px;
     }
 
+    .icon {
+      font-weight: bold;
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+      font-family: monospace;
+    }
+
     .login-form {
       margin-bottom: 30px;
     }
@@ -221,7 +229,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔐 Admin Panel</h1>
+    <h1><span class="icon">[*]</span> Admin Panel</h1>
     <p class="subtitle">Manage shared passwords and pastes</p>
 
     <div class="login-form" id="loginForm">
@@ -242,7 +250,7 @@
           <p class="stats">Total: <span id="totalPastes">0</span> pastes</p>
         </div>
         <div>
-          <button class="refresh-btn" onclick="loadPastes()">🔄 Refresh</button>
+          <button class="refresh-btn" onclick="loadPastes()"><span class="icon">[⟳]</span> Refresh</button>
           <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
       </div>
